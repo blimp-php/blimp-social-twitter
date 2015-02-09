@@ -1,0 +1,42 @@
+{
+    "name": "blimp/blimp-social-twitter",
+    "type": "library",
+    "description": "Blimp framework",
+    "license": "LGPL-3.0+",
+    "authors": [
+        {
+            "name": "Nelson Antunes",
+            "email": "nelson.antunes@gmail.com",
+            "homepage": "http://nantunes.net",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "blimp/blimp-http": "@dev",
+        "blimp/blimp-social": "@dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Blimp\\Accounts\\": "src"
+        }
+    },
+    "minimum-stability": "dev",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "../blimp-http"
+        },
+        {
+            "type": "vcs",
+            "url": "../blimp-social"
+        },
+        {
+            "type": "vcs",
+            "url": "../blimp-data-access"
+        },
+        {
+            "type": "vcs",
+            "url": "../blimp-data-access-mongo"
+        }
+    ]
+}
