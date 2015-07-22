@@ -1,6 +1,5 @@
 {
     "name": "blimp/blimp-social-twitter",
-    "version": "0.1.5",
     "type": "library",
     "description": "Blimp framework",
     "license": "LGPL-3.0+",

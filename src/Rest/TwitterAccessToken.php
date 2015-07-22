@@ -30,7 +30,7 @@ class TwitterAccessToken extends Oauth1AccessToken {
         return $this->api['config']['twitter']['consumer_secret'];
     }
 
-    public function processAccountData(array $oauth_data) {
+    public function processAccountData($oauth_data) {
         if ($oauth_data != NULL && $oauth_data['oauth_token'] != NULL) {
             $access_token = $oauth_data['oauth_token'];
             $oauth_token_secret = $oauth_data['oauth_token_secret'];
