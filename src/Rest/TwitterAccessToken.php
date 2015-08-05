@@ -31,7 +31,7 @@ class TwitterAccessToken extends Oauth1AccessToken {
     }
 
     public function processAccountData($oauth_data) {
-        if ($oauth_data != NULL && $oauth_data['oauth_token'] != NULL) {
+        if (!empty($oauth_data) && !empty($oauth_data['oauth_token']) && !empty($oauth_data['oauth_token_secret'])) {
             $access_token = $oauth_data['oauth_token'];
             $oauth_token_secret = $oauth_data['oauth_token_secret'];
 
@@ -40,7 +40,7 @@ class TwitterAccessToken extends Oauth1AccessToken {
             /* Get profile_data */
             $params = [
                 'include_entities' => 'false',
-                'skip_status' => 'false'
+                'skip_status' => 'true'
             ];
 
             $oauth_params = [
@@ -59,39 +59,49 @@ class TwitterAccessToken extends Oauth1AccessToken {
             }
 
             if ($profile_data != null && $profile_data['id'] != null) {
-                $id = 'twitter-' . $profile_data['id'];
-                $profile_url = 'https://www.twitter.com/' . $profile_data['screen_name'];
-                $mug = $profile_data['profile_image_url_https'];
-
-                $account = new Account();
-                $account->setId($id);
-                $account->setType('twitter');
-                $account->setAuthData($oauth_data);
-                $account->setProfileData($profile_data);
+                $id = hash_hmac('ripemd160', 'twitter-' . $profile_data['id'], 'obscure');
 
                 $dm = $this->api['dataaccess.mongoodm.documentmanager']();
 
-                $check = $dm->find('Blimp\Accounts\Documents\Account', $id);
+                $account = $dm->find('Blimp\Accounts\Documents\Account', $id);
 
-                if ($check != null) {
-                    // TODO
-                    throw new BlimpHttpException(Response::HTTP_CONFLICT, "Duplicate Id", "Id strategy set to NONE and provided Id already exists");
+                if ($account != null) {
+                    $code = Response::HTTP_FOUND;
+                } else {
+                    $code = Response::HTTP_CREATED;
+
+                    $account = new Account();
+                    $account->setId($id);
+                    $account->setType('twitter');
                 }
+
+                $resource_uri = '/accounts/' . $account->getId();
+
+                $secret = NULL;
+                if($account->getOwner() == NULL) {
+                    $bytes = openssl_random_pseudo_bytes(16);
+                    $hex   = bin2hex($bytes);
+                    $secret = password_hash($hex, PASSWORD_DEFAULT);
+                }
+
+                $account->setBlimpSecret($secret);
+
+                $account->setAuthData($oauth_data);
+                $account->setProfileData($profile_data);
 
                 $dm->persist($account);
                 $dm->flush();
 
-                $resource_uri = $this->request->getPathInfo() . '/' . $account->getId();
-
-                $response = new JsonResponse((object) ["uri" => $resource_uri], Response::HTTP_CREATED);
-                $response->headers->set('Location', $resource_uri);
+                $response = new JsonResponse((object) ["uri" => $resource_uri, "secret" => $secret], $code);
+                $response->headers->set('AccountUri', $resource_uri);
+                $response->headers->set('AccountSecret', $secret);
 
                 return $response;
             } else {
-                throw new KRestException(KHTTPResponse::NOT_FOUND, KEXCEPTION_RESOURCE_NOT_FOUND, profile_data);
+                throw new BlimpHttpException(Response::HTTP_NOT_FOUND, 'Profile not found', $profile_data);
             }
         } else {
-            throw new KRestException(KHTTPResponse::UNAUTHORIZED, KEXCEPTION_FACEBOOK_ACCESS_DENIED);
+            throw new BlimpHttpException(Response::HTTP_UNAUTHORIZED, 'Invalid credentials', $oauth_data);
         }
     }
 }
